@@ -1,26 +1,38 @@
 ---
-title: "Parlamentares no Twitter: Como pia o Congresso Nacional?"
+title: 'Parlamentares no Twitter: Como pia o Congresso Nacional?'
 author: "Matheus Alves dos Santos"
 date: "04 de abril de 2019"
-css: r-markdown.css
 output:
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
   html_document:
-    toc: true
     theme: flatly
+    toc: yes
     toc_depth: 5
     toc_float:
-      collapsed: false
+      collapsed: no
+css: r-markdown.css
 ---
 
-Introdução ao tema.
+Na maioria dos países democráticos, os parlamentares costumam adotar perfis em redes sociais como canais de comunicação não-oficiais, através dos quais podem não somente divulgar sua atuação política, mas também comentar assuntos cotidianos e permitir o contato direto da população em geral.
+
+O Twitter tem atraído bastante a atenção dos brasileiros nos últimos meses e, muitas vezes isso não se deve às suas funcionalidades, mas às polêmicas geradas a partir de postagens de figuras políticas do país. Nesse sentido, decidiu-se explorar os dados de nossos parlamentares *twitteiros* na tentativa de compreender melhor como *tweeta* o Congresso Nacional brasileiro.
 
 ## Preparação do Ambiente
 
 Para as análises apresentadas a seguir, foram utilizadas as bibliotecas **tidyverse** e **ggplot2**. Já os dados utilizados estão estruturados da seguinte maneira:
 
 ```{r warning = FALSE, message = FALSE, error = FALSE, echo = FALSE}
-library(tidyverse)
 library(ggplot2)
+
+# LCC1
+library(readr)
+library(dplyr)
+library(ggplot2)
+
+# LCC3
+# library(tidyverse)
 
 source(here::here("code/lib.R"))
 
@@ -39,8 +51,22 @@ glimpse(atividade)
 
 ### 1 — Quais partidos mais produzem conteúdo no Twitter?
 
+Para contabilizar o conteúdo produzido no Twitter será utilizada a soma do número de tweets e retweets de cada parlamentar. Considerando que o número de parlamentares eleitos por partido varia muito, será utilizada a mediana da soma (com agrupamento por partido) citada anteriormente. Por fim, não serão analisados parlamentares sem partido.
+
 ```{r warning =FALSE, message = FALSE, error = FALSE}
+parlamentares_com_tt <- atividade %>% filter(!is.na(twitter))
+
+parlamentares_com_tt %>%
+  group_by(partido) %>%
+  filter(partido != 'S/Partido') %>%
+  summarise(mediana_tweets = median(n_proprio + n_retweet)) %>%
+    ggplot(aes(x = reorder(partido, mediana_tweets), y = mediana_tweets)) +
+    geom_bar(stat = 'identity', show.legend = FALSE) +
+    labs(x = 'Partido', y = 'Mediana do número de tweets') +
+    coord_flip()
 ```
+
+Conforme o gráfico de barras acima, os partidos mais *twitteiros* do Brasil são o PSOL, o PC do B e NOVO. É importante ressaltar que devido às métricas utilizadas, parlamentares específicos desses partidos podem ter mais impactado profundamente no resultado. Ainda assim, é interessante notar que os partidos com mais parlamentares eleitos (PSL e PT) não figuram entre as primeiras posições.
 
 ### 2 — Dos 3 partidos com mais conteúdo produzido, quais parlamentares mais contribuíram com esse resultado?
 
