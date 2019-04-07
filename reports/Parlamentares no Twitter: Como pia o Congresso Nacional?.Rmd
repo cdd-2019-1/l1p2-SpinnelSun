@@ -1,40 +1,35 @@
 ---
-title: 'Parlamentares no Twitter: Como pia o Congresso Nacional?'
+title: "Parlamentares no Twitter: Como pia o Congresso Nacional?"
 author: "Matheus Alves dos Santos"
 date: "04 de abril de 2019"
 output:
-  pdf_document:
-    toc: yes
-    toc_depth: '5'
   html_document:
     theme: flatly
     toc: yes
     toc_depth: 5
     toc_float:
       collapsed: no
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
 css: r-markdown.css
 ---
 
-Na maioria dos países democráticos, os parlamentares costumam adotar perfis em redes sociais como canais de comunicação não-oficiais, através dos quais podem não somente divulgar sua atuação política, mas também comentar assuntos cotidianos e permitir o contato direto da população em geral.
+Na maioria dos países democráticos, os parlamentares costumam adotar perfis em redes sociais como canais de comunicação não-oficiais, através dos quais podem não somente divulgar sua atuação política, mas também comentar assuntos cotidianos e entrar em contato direto da população em geral.
 
-O Twitter tem atraído bastante a atenção dos brasileiros nos últimos meses e, muitas vezes isso não se deve às suas funcionalidades, mas às polêmicas geradas a partir de postagens de figuras políticas do país. Nesse sentido, decidiu-se explorar os dados de nossos parlamentares *twitteiros* na tentativa de compreender melhor como *tweeta* o Congresso Nacional brasileiro.
+O Twitter tem atraído bastante a atenção dos brasileiros nos últimos meses e, muitas vezes, isso não se deve às suas funcionalidades, mas às polêmicas geradas a partir de postagens de figuras políticas do país. Nesse sentido, decidiu-se explorar os dados de nossos parlamentares *twitteiros* na tentativa de compreender melhor como *tweeta* o Congresso Nacional brasileiro.
 
 ## Preparação do Ambiente
 
-Para as análises apresentadas a seguir, foram utilizadas as bibliotecas **tidyverse** e **ggplot2**. Já os dados utilizados estão estruturados da seguinte maneira:
+Para as análises apresentadas a seguir, foram utilizadas as bibliotecas **tidyverse**, **ggplot2**, **ggbeeswarm** e **scales**. Já os dados utilizados estão estruturados da seguinte maneira:
 
 ```{r warning = FALSE, message = FALSE, error = FALSE, echo = FALSE}
+library(tidyverse)
+library(ggbeeswarm)
 library(ggplot2)
+library(scales)
 
-# LCC1
-library(readr)
-library(dplyr)
-library(ggplot2)
-
-# LCC3
-# library(tidyverse)
-
-source(here::here("code/lib.R"))
+source(here::here('code/lib.R'))
 
 theme_set(theme_bw())
 ```
@@ -53,34 +48,91 @@ glimpse(atividade)
 
 Para contabilizar o conteúdo produzido no Twitter será utilizada a soma do número de tweets e retweets de cada parlamentar. Considerando que o número de parlamentares eleitos por partido varia muito, será utilizada a mediana da soma (com agrupamento por partido) citada anteriormente. Por fim, não serão analisados parlamentares sem partido.
 
-```{r warning =FALSE, message = FALSE, error = FALSE}
+```{r warning = FALSE, message = FALSE, error = FALSE}
 parlamentares_com_tt <- atividade %>% filter(!is.na(twitter))
+
+parlamentares_com_tt <- parlamentares_com_tt %>% mutate(total_tweets = n_proprio + n_retweet)
 
 parlamentares_com_tt %>%
   group_by(partido) %>%
-  filter(partido != 'S/Partido') %>%
-  summarise(mediana_tweets = median(n_proprio + n_retweet)) %>%
+  filter(partido != "S/Partido") %>%
+  summarise(mediana_tweets = median(total_tweets)) %>%
     ggplot(aes(x = reorder(partido, mediana_tweets), y = mediana_tweets)) +
-    geom_bar(stat = 'identity', show.legend = FALSE) +
-    labs(x = 'Partido', y = 'Mediana do número de tweets') +
+    geom_bar(stat = 'identity', fill = 'midnightblue', width = 0.7) +
+    labs(x = 'Partido', y = 'Mediana do número de tweets de 2019') +
     coord_flip()
 ```
 
-Conforme o gráfico de barras acima, os partidos mais *twitteiros* do Brasil são o PSOL, o PC do B e NOVO. É importante ressaltar que devido às métricas utilizadas, parlamentares específicos desses partidos podem ter mais impactado profundamente no resultado. Ainda assim, é interessante notar que os partidos com mais parlamentares eleitos (PSL e PT) não figuram entre as primeiras posições.
+Conforme o gráfico de barras acima, os partidos mais *twitteiros* do Brasil são o **PSOL**, o **PCdoB** e o **NOVO**. É interessante notar que os partidos com mais parlamentares eleitos (PSL e PT) não figuram entre as primeiras posições e que a mediana de tweets do PSOL se aproxima do dobro da mediana do 2º colocado. Ainda, descobriu-se alguns partidos (PR, PPL, DC e AVANTE) em que todos os parlamentares eleitos que tem uma conta no *Twitter* são ou estão inativos nessa rede social.
 
-### 2 — Dos 3 partidos com mais conteúdo produzido, quais parlamentares mais contribuíram com esse resultado?
+### 2 — No partido com mais conteúdo produzido, quais parlamentares *tweetam* mais?
 
-```{r warning =FALSE, message = FALSE, error = FALSE}
+Dentre os partidos que mais produzem conteúdo no *Twitter*, os parlamentares do PSOL destacam-se pela quantidade que produzem, mesmo que sejam tão pouco numerosos em relação a outros partidos. No entanto, ainda é necessário compreender a contribuição de cada um desses políticos para este resultado.
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+parlamentares_com_tt %>%
+  filter(partido == "PSOL") %>%
+    ggplot(aes(x = reorder(nome_eleitoral, -total_tweets), y = total_tweets)) + 
+    geom_segment(aes(xend = nome_eleitoral, y = 0, yend = total_tweets), show.legend = FALSE, color = 'red2') +
+    geom_point(size = 3, show.legend = FALSE, color = 'red2') + 
+    labs(x = "Parlamentares do PSOL", y = "Total de tweets em 2019") +
+    theme(axis.text.x = element_text(angle = 90))
 ```
 
-### 3 — O posicionamento de um partido impacta no engajamento que ele é capaz de gerar?
+Os parlamentares do PSOL apresentam níveis bastante variados de produção de conteúdo, destacando-se **Marcelo Freixo** como maior *twitteiro* de seu partido e **Ivan Valente** que não deu um pio em 2019. É perceptível ainda que, no geral, as mulheres eleitas pelo PSOL são mais ativas no Twitter do que os homens, bem como que os parlamentares conhecidos nacionalmente não são necessariamente *twitteiros* natos.
 
-```{r warning =FALSE, message = FALSE, error = FALSE}
+### 3 — O espectro político impacta no engajamento gerado pelos partidos?
+
+Para responder esta pergunta, é necessário entender onde cada partido político se localiza no espectro político. Dada a subjetividade desta avaliação, adotou-se o modo como os próprios partidos se descrevem e não a atuação de seus parlamentares, gerando três grandes grupos de partidos: esquerda, centro e direita. Considerando a diferença no número de partidos e de parlamentares em cada um desses grupos, decidiu-se utilizar o engajamento mediano como métrica da análise. Além disso, por questões de visualização, adotou-se uma escala logarítmica.
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+centro <- c("AVANTE", "MDB", "PSD", "PSDB", "PTB", "SOLIDARIEDADE")
+esquerda <- c("PCdoB", "PDT", "PMN", "PPL", "PPS", "PROS", "PSB", "PSOL", "PT", "PV", "REDE")
+direita <- c("DC", "DEM", "NOVO", "PATRI", "PHS", "PODE", "PP", "PR", "PRB", "PRP",  "PSC", "PSL")
+
+parlamentares_com_tt <- parlamentares_com_tt %>%
+  mutate(posicionamento = ifelse(partido %in% centro, "Centro",
+                            ifelse(partido %in% esquerda, "Esquerda",
+                              ifelse(partido %in% direita, "Direita", NA))))
+
+parlamentares_com_tt %>%
+  filter(!is.na(posicionamento)) %>%
+    ggplot(aes(x = posicionamento, y = engaj_mediano, color = posicionamento)) +
+    geom_boxplot(coef = 1000, show.legend = FALSE) +
+    geom_quasirandom(alpha = .3, show.legend = FALSE) +
+    labs(x = "Posicionamento político", y = "Engajamento mediano (em log10)") +
+    scale_y_log10(labels = comma)
 ```
 
-### 4 — E o estado de origem dos parlamentares desses partidos?
+Os três grandes grupos do espectro político apresentaram características bem peculiares. Excetuando-se alguns poucos parlamentares, os partidos centristas tem resultados bem inferiores aos demais quanto ao engajamento gerado via Twitter, o que não chega a surpreender dado o nosso cenário político. Já a esquerda conta com a maior das medianas encontradas e engajamentos mais homogêneos entre seus parlamentares. Por fim, a direita conta com valores mais dispersos, mas também com os parlamentares que geram os maiores engajamentos.
 
-```{r warning =FALSE, message = FALSE, error = FALSE}
+### 4 — E as UFs desses parlamentares, tem impacto no engajamento?
+
+Assim como na análise anterior, adotou-se uma escala logarítmica. Também visando a melhor compreensão do leitor, os *boxplots* foram coloridos de acordo com a região do Brasil a que cada estado pertence.
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+centrooeste <- c("DF", "GO", "MS", "MT")
+nordeste <- c("AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE")
+norte <- c("AC", "AP", "AM", "PA", "RO", "RR", "TO")
+sudeste <- c("ES", "MG", "RJ", "SP")
+sul <- c("PR", "RS", "SC")
+
+parlamentares_com_tt <- parlamentares_com_tt %>%
+  mutate(regiao = ifelse(UF %in% centrooeste, "Centro-Oeste",
+                            ifelse(UF %in% nordeste, "Nordeste",
+                              ifelse(UF %in% norte, "Norte",
+                                ifelse(UF %in% sudeste, "Sudeste", "Sul")))))
+
+parlamentares_com_tt %>%
+  ggplot(aes(x = reorder(UF, engaj_mediano), y = engaj_mediano, color = regiao)) +
+  labs(x = "Unidade Federativa", y = "Engajamento mediano (em log10)") +
+  guides(color = guide_legend(title = "Região")) +
+  geom_boxplot(width = .5, coef = 1000) +
+  theme(legend.position="bottom") +
+  scale_y_log10(labels = comma) +
+  coord_flip()
 ```
 
-## Conclusões
+Os estados do sul e sudeste brasileiros são aqueles em que residem os parlamentares com maior engajamento no Twitter, em especial **Rio de Janeiro**, **Paraná** e **São Paulo**. Já os parlamentares dos estados do norte e nordeste são aqueles que tem as menores máximas do engajamento mediano nessa rede social. No entanto, o engajamento gerado por parlamentares desses estados é bem mais homogêneo, de modo que são identificadas situações curiosas como o **Rio Grande do Norte** alcançando uma mediana muito semelhante à de **São Paulo**.
+
+Sem causar qualquer surpresa, as chances de encontrar um político paulista *hitando* no Twitter é bem maior do que um encontrar um político paraibano fazendo tanto sucesso.
