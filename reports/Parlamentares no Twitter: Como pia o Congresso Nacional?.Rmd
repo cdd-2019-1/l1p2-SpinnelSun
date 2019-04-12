@@ -1,6 +1,6 @@
 ---
 title: "Parlamentares no Twitter: Como pia o Congresso Nacional?"
-author: "Matheus Alves dos Santos"
+author: "Iann Carvalho Barbosa, Mateus de Lima Oliveira e Matheus Alves dos Santos"
 date: "04 de abril de 2019"
 output:
   html_document:
@@ -27,9 +27,10 @@ Para as análises apresentadas a seguir, foram utilizadas as bibliotecas **tidyv
 library(tidyverse)
 library(ggbeeswarm)
 library(ggplot2)
-library(scales)
+library(plotly)
 
 source(here::here('code/lib.R'))
+options(scipen = 999)
 
 theme_set(theme_bw())
 ```
@@ -50,40 +51,77 @@ Para contabilizar o conteúdo produzido no Twitter será utilizada a soma do nú
 
 ```{r warning = FALSE, message = FALSE, error = FALSE}
 parlamentares_com_tt <- atividade %>% filter(!is.na(twitter))
-
 parlamentares_com_tt <- parlamentares_com_tt %>% mutate(total_tweets = n_proprio + n_retweet)
 
-parlamentares_com_tt %>%
+plot_1 = parlamentares_com_tt %>%
   group_by(partido) %>%
   filter(partido != "S/Partido") %>%
-  summarise(mediana_tweets = median(total_tweets)) %>%
-    ggplot(aes(x = reorder(partido, mediana_tweets), y = mediana_tweets)) +
-    geom_bar(stat = 'identity', fill = 'midnightblue', width = 0.7) +
-    labs(x = 'Partido', y = 'Mediana do número de tweets de 2019') +
-    coord_flip()
+  summarise(conteudo_produzido = median(total_tweets, na.rm = TRUE),
+            median_retweet = median(n_retweet, na.rm = TRUE),
+            median_proprio = median(n_proprio, na.rm = TRUE)) %>%
+  ggplot(aes(x = reorder(partido, conteudo_produzido), y = conteudo_produzido, alpha = .8,
+             text = paste("Partido:", partido,
+                          "<br>Número de tweets:", median_proprio, 
+                          "<br>Número de retweets:", median_retweet))) +
+  geom_col(show.legend = FALSE) +
+  labs(x = 'Partido', y = 'Mediana do número de tweets de 2019', title = 'Conteúdo produzido por Parlamentar') +
+  coord_flip()
+
+ggplotly(plot_1, tooltip = c("text"))
+
+# Colocar cores bonitas
 ```
 
 Conforme o gráfico de barras acima, os partidos mais *twitteiros* do Brasil são o **PSOL**, o **PCdoB** e o **NOVO**. É interessante notar que os partidos com mais parlamentares eleitos (PSL e PT) não figuram entre as primeiras posições e que a mediana de tweets do PSOL se aproxima do dobro da mediana do 2º colocado. Ainda, descobriu-se alguns partidos (PR, PPL, DC e AVANTE) em que todos os parlamentares eleitos que tem uma conta no *Twitter* são ou estão inativos nessa rede social.
 
-### 2 — No partido com mais conteúdo produzido, quais parlamentares *tweetam* mais?
+### 2 — Qual a casa e quais os políticos mais ativos no Twitter?
 
-Dentre os partidos que mais produzem conteúdo no *Twitter*, os parlamentares do PSOL destacam-se pela quantidade que produzem, mesmo que sejam tão pouco numerosos em relação a outros partidos. No entanto, ainda é necessário compreender a contribuição de cada um desses políticos para este resultado.
+Considerando que a Câmara de Deputados tem 513 parlamentares enquanto o senado federal tem apenas 81, utilizou-se mediana do número de tweets e de retweets, em vez de considerar a soma do somatório do número de retweets e tweets.
 
 ```{r warning = FALSE, message = FALSE, error = FALSE}
-parlamentares_com_tt %>%
-  filter(partido == "PSOL") %>%
-    ggplot(aes(x = reorder(nome_eleitoral, -total_tweets), y = total_tweets)) + 
-    geom_segment(aes(xend = nome_eleitoral, y = 0, yend = total_tweets), show.legend = FALSE, color = 'red2') +
-    geom_point(size = 3, show.legend = FALSE, color = 'red2') + 
-    labs(x = "Parlamentares do PSOL", y = "Total de tweets em 2019") +
-    theme(axis.text.x = element_text(angle = 90))
+plot_2 = parlamentares_com_tt %>%
+  ggplot(aes(x = casa, y = total_tweets, color = casa)) + 
+  geom_quasirandom(aes(alpha = .4), show.legend = FALSE) +
+  stat_summary(geom = "point", fun.y = "median", size = 2, color = 'black') +
+  scale_y_continuous(trans = "sqrt")
+
+plot_2
 ```
 
-Os parlamentares do PSOL apresentam níveis bastante variados de produção de conteúdo, destacando-se **Marcelo Freixo** como maior *twitteiro* de seu partido e **Ivan Valente** que não deu um pio em 2019. É perceptível ainda que, no geral, as mulheres eleitas pelo PSOL são mais ativas no Twitter do que os homens, bem como que os parlamentares conhecidos nacionalmente não são necessariamente *twitteiros* natos.
+```{r warning=FALSE}
+dados2_2_1 = atividade %>%
+          mutate(participacao = n_retweet + n_proprio, na.rm = TRUE) %>%
+          filter(casa == "câmara") %>%
+          top_n(10, participacao)
+vis2_2_1 = dados2_2_1 %>% 
+        ggplot(aes(x= reorder(nome_eleitoral,participacao), y= participacao,fill = nome_eleitoral, alpha = .4, text = paste("Casa:", casa, "<br>Número de tweets:", n_proprio, "<br>Número de retweets:", n_retweet))) +
+        geom_col(show.legend = FALSE) +
+        coord_flip() +
+        scale_fill_brewer(palette = "Set3")
+dados2_2_2 = atividade %>%
+          mutate(participacao = n_retweet + n_proprio, na.rm = TRUE) %>%
+          filter(casa == "senado") %>%
+          top_n(10, participacao)
+vis2_2_2 = dados2_2_2 %>% 
+        ggplot(aes(x= reorder(nome_eleitoral,participacao), y= participacao,fill = nome_eleitoral, alpha = .4, text = paste("Casa:", casa, "<br>Número de tweets:", n_proprio, "<br>Número de retweets:", n_retweet))) +
+        geom_col(show.legend = FALSE) +
+        ggtitle("10 políticos mais ativos") +
+        coord_flip() +
+        scale_fill_brewer(palette = "Set3")
+          
+subplot(ggplotly(vis2_2_1, tooltip = c("text")), ggplotly(vis2_2_2, tooltip = c("text")), nrows = 2)
+```
 
+Perante a visualização, foi possível perceber que apesar dos números brutos a câmara mais **tweets** e **retweets**, proporcionalmente o senado é mais ativo.
+
+Para definir cada político mais ativo em cada casa, diferente das outras análises, foram utilizados números brutos, já que estamos trabalhando com cada deputado/senador por vez, tornando-se assim, desnecessário fazer somatórios, médias ou medianas.
+
+
+  Perante os gráficos, foi possível perceber que tanto Bacelar, na Câmara de deputados, quanto Álvaro Dias, Humberto Costa, Jorge Kajuru e Lasier Martins, no Senado Federal, são muito mais ativos que os demais.
+  
 ### 3 — O espectro político impacta no engajamento gerado pelos partidos?
 
-Para responder esta pergunta, é necessário entender onde cada partido político se localiza no espectro político. Dada a subjetividade desta avaliação, adotou-se o modo como os próprios partidos se descrevem e não a atuação de seus parlamentares, gerando três grandes grupos de partidos: esquerda, centro e direita. Considerando a diferença no número de partidos e de parlamentares em cada um desses grupos, decidiu-se utilizar o engajamento mediano como métrica da análise. Além disso, por questões de visualização, adotou-se uma escala logarítmica.
+Para responder esta pergunta, é necessário entender onde cada partido político se localiza no espectro político. Dada a subjetividade desta avaliação, adotou-se o modo como os próprios partidos se descrevem e não a atuação de seus parlamentares, gerando três grandes grupos de partidos: esquerda, centro e direita. Considerando a diferença no número de partidos e de parlamentares em cada um desses grupos, decidiu-se utilizar o engajamento mediano como métrica da análise, sendo este engajamento a soma do número de *likes* e de *retweets* recebidos pelos parlamentares. Além disso, por questões de visualização, adotou-se uma escala logarítmica.
 
 ```{r warning = FALSE, message = FALSE, error = FALSE}
 centro <- c("AVANTE", "MDB", "PSD", "PSDB", "PTB", "SOLIDARIEDADE")
@@ -91,48 +129,27 @@ esquerda <- c("PCdoB", "PDT", "PMN", "PPL", "PPS", "PROS", "PSB", "PSOL", "PT", 
 direita <- c("DC", "DEM", "NOVO", "PATRI", "PHS", "PODE", "PP", "PR", "PRB", "PRP",  "PSC", "PSL")
 
 parlamentares_com_tt <- parlamentares_com_tt %>%
-  mutate(posicionamento = ifelse(partido %in% centro, "Centro",
-                            ifelse(partido %in% esquerda, "Esquerda",
-                              ifelse(partido %in% direita, "Direita", NA))))
-
+  mutate(posicionamento = case_when(
+    partido %in% centro ~ "Centro",
+    partido %in% esquerda ~ "Esquerda",
+    partido %in% direita ~ "Direita",
+    TRUE ~ NA_character_
+  ))
+         
 parlamentares_com_tt %>%
+  mutate(ordem_posicionamento = case_when(
+    posicionamento == "Esquerda" ~ 1, 
+    posicionamento == "Centro" ~ 2,
+    posicionamento == "Direita" ~ 3
+  )) %>%
   filter(!is.na(posicionamento)) %>%
-    ggplot(aes(x = posicionamento, y = engaj_mediano, color = posicionamento)) +
+    ggplot(aes(x = reorder(posicionamento, ordem_posicionamento), y = engaj_mediano, color = posicionamento)) +
     geom_boxplot(coef = 1000, show.legend = FALSE) +
     geom_quasirandom(alpha = .3, show.legend = FALSE) +
     labs(x = "Posicionamento político", y = "Engajamento mediano (em log10)") +
-    scale_y_log10(labels = comma)
+    scale_y_log10() 
+
+# Permitir visualizar o nome dos parlamentares em cada um dos pontos
 ```
 
 Os três grandes grupos do espectro político apresentaram características bem peculiares. Excetuando-se alguns poucos parlamentares, os partidos centristas tem resultados bem inferiores aos demais quanto ao engajamento gerado via Twitter, o que não chega a surpreender dado o nosso cenário político. Já a esquerda conta com a maior das medianas encontradas e engajamentos mais homogêneos entre seus parlamentares. Por fim, a direita conta com valores mais dispersos, mas também com os parlamentares que geram os maiores engajamentos.
-
-### 4 — E as UFs desses parlamentares, tem impacto no engajamento?
-
-Assim como na análise anterior, adotou-se uma escala logarítmica. Também visando a melhor compreensão do leitor, os *boxplots* foram coloridos de acordo com a região do Brasil a que cada estado pertence.
-
-```{r warning = FALSE, message = FALSE, error = FALSE}
-centrooeste <- c("DF", "GO", "MS", "MT")
-nordeste <- c("AL", "BA", "CE", "MA", "PB", "PE", "PI", "RN", "SE")
-norte <- c("AC", "AP", "AM", "PA", "RO", "RR", "TO")
-sudeste <- c("ES", "MG", "RJ", "SP")
-sul <- c("PR", "RS", "SC")
-
-parlamentares_com_tt <- parlamentares_com_tt %>%
-  mutate(regiao = ifelse(UF %in% centrooeste, "Centro-Oeste",
-                            ifelse(UF %in% nordeste, "Nordeste",
-                              ifelse(UF %in% norte, "Norte",
-                                ifelse(UF %in% sudeste, "Sudeste", "Sul")))))
-
-parlamentares_com_tt %>%
-  ggplot(aes(x = reorder(UF, engaj_mediano), y = engaj_mediano, color = regiao)) +
-  labs(x = "Unidade Federativa", y = "Engajamento mediano (em log10)") +
-  guides(color = guide_legend(title = "Região")) +
-  geom_boxplot(width = .5, coef = 1000) +
-  theme(legend.position="bottom") +
-  scale_y_log10(labels = comma) +
-  coord_flip()
-```
-
-Os estados do sul e sudeste brasileiros são aqueles em que residem os parlamentares com maior engajamento no Twitter, em especial **Rio de Janeiro**, **Paraná** e **São Paulo**. Já os parlamentares dos estados do norte e nordeste são aqueles que tem as menores máximas do engajamento mediano nessa rede social. No entanto, o engajamento gerado por parlamentares desses estados é bem mais homogêneo, de modo que são identificadas situações curiosas como o **Rio Grande do Norte** alcançando uma mediana muito semelhante à de **São Paulo**.
-
-Sem causar qualquer surpresa, as chances de encontrar um político paulista *hitando* no Twitter é bem maior do que um encontrar um político paraibano fazendo tanto sucesso.
