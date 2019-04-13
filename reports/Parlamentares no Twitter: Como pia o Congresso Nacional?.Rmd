@@ -21,7 +21,7 @@ O Twitter tem atraído bastante a atenção dos brasileiros nos últimos meses e
 
 ## Preparação do Ambiente
 
-Para as análises apresentadas a seguir, foram utilizadas as bibliotecas **tidyverse**, **ggplot2**, **ggbeeswarm** e **scales**. Já os dados utilizados estão estruturados da seguinte maneira:
+Para as análises apresentadas a seguir, foram utilizadas as bibliotecas **tidyverse**, **ggplot2**, **ggbeeswarm** e **plotly**. Já os dados utilizados estão estruturados da seguinte maneira:
 
 ```{r warning = FALSE, message = FALSE, error = FALSE, echo = FALSE}
 library(tidyverse)
@@ -74,52 +74,32 @@ ggplotly(plot_1, tooltip = c("text"))
 
 Conforme o gráfico de barras acima, os partidos mais *twitteiros* do Brasil são o **PSOL**, o **PCdoB** e o **NOVO**. É interessante notar que os partidos com mais parlamentares eleitos (PSL e PT) não figuram entre as primeiras posições e que a mediana de tweets do PSOL se aproxima do dobro da mediana do 2º colocado. Ainda, descobriu-se alguns partidos (PR, PPL, DC e AVANTE) em que todos os parlamentares eleitos que tem uma conta no *Twitter* são ou estão inativos nessa rede social.
 
-### 2 — Qual a casa e quais os políticos mais ativos no Twitter?
+### 2 — Qual a casa e quais os parlamentares mais ativos no Twitter?
 
-Considerando que a Câmara de Deputados tem 513 parlamentares enquanto o senado federal tem apenas 81, utilizou-se mediana do número de tweets e de retweets, em vez de considerar a soma do somatório do número de retweets e tweets.
+Para determinar qual das casas do Congresso Nacional e quais os parlamentares mais ativos no Twitter, será utilizada a soma do número de tweets e retweets de cada parlamentar, agrupando-os pela casa a que pertencem. Considerando a diferença do número de eleitos em cada casa (513 deputados e 81 senadores), adotou-se a mediana dessa soma como métrica.
 
 ```{r warning = FALSE, message = FALSE, error = FALSE}
 plot_2 = parlamentares_com_tt %>%
   ggplot(aes(x = casa, y = total_tweets, color = casa)) + 
   geom_quasirandom(aes(alpha = .4), show.legend = FALSE) +
   stat_summary(geom = "point", fun.y = "median", size = 2, color = 'black') +
+  labs(x = "Casa do Congresso Nacional", y = "Número de tweets em 2019", title = "Conteúdo produzido por casa do Congresso Nacional") +
   scale_y_continuous(trans = "sqrt")
 
 plot_2
 ```
 
-```{r warning=FALSE}
-dados2_2_1 = atividade %>%
-          mutate(participacao = n_retweet + n_proprio, na.rm = TRUE) %>%
-          filter(casa == "câmara") %>%
-          top_n(10, participacao)
-vis2_2_1 = dados2_2_1 %>% 
-        ggplot(aes(x= reorder(nome_eleitoral,participacao), y= participacao,fill = nome_eleitoral, alpha = .4, text = paste("Casa:", casa, "<br>Número de tweets:", n_proprio, "<br>Número de retweets:", n_retweet))) +
-        geom_col(show.legend = FALSE) +
-        coord_flip() +
-        scale_fill_brewer(palette = "Set3")
-dados2_2_2 = atividade %>%
-          mutate(participacao = n_retweet + n_proprio, na.rm = TRUE) %>%
-          filter(casa == "senado") %>%
-          top_n(10, participacao)
-vis2_2_2 = dados2_2_2 %>% 
-        ggplot(aes(x= reorder(nome_eleitoral,participacao), y= participacao,fill = nome_eleitoral, alpha = .4, text = paste("Casa:", casa, "<br>Número de tweets:", n_proprio, "<br>Número de retweets:", n_retweet))) +
-        geom_col(show.legend = FALSE) +
-        ggtitle("10 políticos mais ativos") +
-        coord_flip() +
-        scale_fill_brewer(palette = "Set3")
-          
-subplot(ggplotly(vis2_2_1, tooltip = c("text")), ggplotly(vis2_2_2, tooltip = c("text")), nrows = 2)
+É perceptível que o Senado atingiu uma mediana consideravelmente superior à Câmara, trazendo a conclusão que esta é proporcionalmente a casa mais *twitteira* do Congresso Nacional brasileiro. Além disso, também é possível notar a existência de uma grande quantidade de deputados inativos em suas contas do Twitter.
+
+Quanto aos parlamentares, foi possível perceber que o deputado Bacelar mostra-se muito mais ativo nessa rede social, não somente em relação aos seus pares, mas também aos senadores. Já no Senado, Álvaro Dias, Humberto Costa e Jorge Kajuru são aqueles que não param de *tweetar*.
+
+### 3 — Quais os partidos mais populares do Twitter?
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+# Scatterplot "Seguindo x Seguidores"
 ```
-
-Perante a visualização, foi possível perceber que apesar dos números brutos a câmara mais **tweets** e **retweets**, proporcionalmente o senado é mais ativo.
-
-Para definir cada político mais ativo em cada casa, diferente das outras análises, foram utilizados números brutos, já que estamos trabalhando com cada deputado/senador por vez, tornando-se assim, desnecessário fazer somatórios, médias ou medianas.
-
-
-  Perante os gráficos, foi possível perceber que tanto Bacelar, na Câmara de deputados, quanto Álvaro Dias, Humberto Costa, Jorge Kajuru e Lasier Martins, no Senado Federal, são muito mais ativos que os demais.
   
-### 3 — O espectro político impacta no engajamento gerado pelos partidos?
+### 4 — O espectro político impacta no engajamento gerado pelos partidos?
 
 Para responder esta pergunta, é necessário entender onde cada partido político se localiza no espectro político. Dada a subjetividade desta avaliação, adotou-se o modo como os próprios partidos se descrevem e não a atuação de seus parlamentares, gerando três grandes grupos de partidos: esquerda, centro e direita. Considerando a diferença no número de partidos e de parlamentares em cada um desses grupos, decidiu-se utilizar o engajamento mediano como métrica da análise, sendo este engajamento a soma do número de *likes* e de *retweets* recebidos pelos parlamentares. Além disso, por questões de visualização, adotou-se uma escala logarítmica.
 
@@ -136,7 +116,7 @@ parlamentares_com_tt <- parlamentares_com_tt %>%
     TRUE ~ NA_character_
   ))
          
-parlamentares_com_tt %>%
+plot_4 = parlamentares_com_tt %>%
   mutate(ordem_posicionamento = case_when(
     posicionamento == "Esquerda" ~ 1, 
     posicionamento == "Centro" ~ 2,
@@ -149,6 +129,7 @@ parlamentares_com_tt %>%
     labs(x = "Posicionamento político", y = "Engajamento mediano (em log10)") +
     scale_y_log10() 
 
+plot_4
 # Permitir visualizar o nome dos parlamentares em cada um dos pontos
 ```
 
