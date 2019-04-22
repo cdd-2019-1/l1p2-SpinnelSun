@@ -1,0 +1,79 @@
+---
+title: "Parlamentares no Twitter: Popularidade e Engajamento"
+author: "Matheus Alves dos Santos"
+date: "22 de abril de 2019"
+output:
+  html_document:
+    theme: flatly
+    toc: yes
+    toc_depth: 5
+    toc_float:
+      collapsed: no
+  pdf_document:
+    toc: yes
+    toc_depth: '5'
+css: r-markdown.css
+---
+
+Na maioria dos países democráticos, os parlamentares costumam adotar perfis em redes sociais como canais de comunicação não-oficiais, através dos quais podem não somente divulgar sua atuação política, mas também comentar assuntos cotidianos e entrar em contato direto da população em geral.
+
+O Twitter tem atraído bastante a atenção dos brasileiros nos últimos meses e, muitas vezes, isso não se deve às suas funcionalidades, mas às polêmicas geradas a partir de postagens de figuras políticas do país. Nesse sentido, decidiu-se explorar os dados de nossos parlamentares *twitteiros* na tentativa de compreender melhor como se dá a atuação do Congresso Nacional brasileiro nessa rede social.
+
+## Preparação do Ambiente
+
+Para as análises apresentadas a seguir, foram utilizadas as bibliotecas **tidyverse** e **ggplot2**. Já os dados utilizados estão estruturados da seguinte maneira:
+
+```{r warning = FALSE, message = FALSE, error = FALSE, echo = FALSE}
+library(tidyverse)
+library(ggplot2)
+
+source(here::here('code/lib.R'))
+options(scipen = 999)
+
+theme_set(theme_bw())
+```
+
+```{r read, warning = FALSE, message = FALSE, error = FALSE, echo = FALSE}
+atividade = read_projectdata()
+```
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+glimpse(atividade)
+```
+
+## Análises
+
+### 1 — Produzir conteúdo é o suficiente para ganhar seguidores?
+
+Texto.
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+parlamentares_com_tt <- atividade %>% filter(!is.na(twitter))
+parlamentares_com_tt <- parlamentares_com_tt %>% mutate(casa = if_else(casa == 'senado', 'Senado', 'Câmara'))
+
+parlamentares_com_tt %>%
+  ggplot(aes(x = n_proprio, y = seguidores, color = casa)) + 
+  geom_point(show.legend = FALSE) +
+  scale_x_log10() +
+  scale_y_log10() +
+  facet_wrap(~ casa)
+```
+
+Texto.
+
+### 2 — Os parlamentares mais *twitteiros* são aqueles que geram mais engajamento?
+
+Texto.
+
+```{r warning = FALSE, message = FALSE, error = FALSE}
+parlamentares_com_tt <- parlamentares_com_tt %>% mutate(total_tweets = n_proprio + n_retweet)
+
+parlamentares_com_tt %>%
+  ggplot(aes(x = total_tweets, y = engaj_max, color = casa)) + 
+  geom_point(show.legend = FALSE) +
+  scale_x_continuous(trans = "sqrt") +
+  scale_y_continuous(trans = "sqrt") +
+  facet_wrap(~ casa)
+```
+
+Texto.
