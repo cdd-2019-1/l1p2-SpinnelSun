@@ -45,7 +45,7 @@ glimpse(atividade)
 
 ### 1 — Produzir conteúdo é o suficiente para ganhar seguidores?
 
-Texto.
+Esse é um questionamento que costuma rodear as figuras públicas e, desta forma, torna-se pertinente na análise do comportamento de nossos parlamentares no *Twitter*. Os dados utilizados podem não ser suficientes para oferecer uma resposta final para essa pergunta, mas são muito úteis para buscar indícios de relação entre a quantidade de conteúdo produzido e o número de seguidores de cada parlamentar.
 
 ```{r warning = FALSE, message = FALSE, error = FALSE}
 parlamentares_com_tt <- atividade %>% filter(!is.na(twitter))
@@ -54,16 +54,28 @@ parlamentares_com_tt <- parlamentares_com_tt %>% mutate(casa = if_else(casa == '
 parlamentares_com_tt %>%
   ggplot(aes(x = n_proprio, y = seguidores, color = casa)) + 
   geom_point(show.legend = FALSE) +
+  labs(x = "Número de tweets próprios (em log10)", y = "Número de seguidores (em log10)") +
   scale_x_log10() +
   scale_y_log10() +
   facet_wrap(~ casa)
 ```
 
-Texto.
+```{r warning = FALSE, message = FALSE, error = FALSE}
+parlamentares_com_tt %>%
+  filter(!is.na(n_proprio) & !is.na(seguidores)) %>%
+  group_by(casa) %>%
+    summarise(Pearson = cor(n_proprio, seguidores, method = "pearson"), 
+              Spearman = cor(n_proprio, seguidores, method = "spearman"), 
+              Kendall = cor(n_proprio, seguidores, method = "kendall"))
+```
+
+Considerando as naturais diferenças entre deputados e senadores, optou-se por tratar os dados separadamente tanto para as visualizações quanto para o cálculo dos coeficientes de correlação. Além disso, para obter uma visualização mais adequada, adotou-se escalas logarítmicas (log10) tanto para o número de tweets próprios quanto para o número de seguidores.
+
+A partir do *scatterplot* acima, percebe-se que, tanto para a Câmara quanto para o Senado, o número de seguidores e de *tweets* próprios são grandezas positivamente relacionadas, porém de maneira bastante fraca. Dessa forma, não é possível identificar um formato claro dessa relação, tampouco pontos extremos já que os pontos estão tão dispersos. Os coeficientes de correlação calculados usando os métodos de Pearson, Spearman e Kendall corroboram com essas impressões, mas também explicitam que a relação é especialmente fraca quando se considera os senadores.
 
 ### 2 — Os parlamentares mais *twitteiros* são aqueles que geram mais engajamento?
 
-Texto.
+Guiando-se pelo senso comum, a existência de uma relação entre a quantidade de conteúdo produzido e o engajamento do público faz bastante sentido. Desta forma, decidiu-se investigar essas duas variáveis.
 
 ```{r warning = FALSE, message = FALSE, error = FALSE}
 parlamentares_com_tt <- parlamentares_com_tt %>% mutate(total_tweets = n_proprio + n_retweet)
@@ -71,9 +83,22 @@ parlamentares_com_tt <- parlamentares_com_tt %>% mutate(total_tweets = n_proprio
 parlamentares_com_tt %>%
   ggplot(aes(x = total_tweets, y = engaj_max, color = casa)) + 
   geom_point(show.legend = FALSE) +
-  scale_x_continuous(trans = "sqrt") +
-  scale_y_continuous(trans = "sqrt") +
+  labs(x = "Total de tweets e retweets (em log10)", y = "Engajamento máximo (em log10)") +
+  scale_x_log10() +
+  scale_y_log10() +
   facet_wrap(~ casa)
 ```
+```{r warning = FALSE, message = FALSE, error = FALSE}
+parlamentares_com_tt %>%
+  filter(!is.na(n_proprio) & !is.na(seguidores)) %>%
+  group_by(casa) %>%
+    summarise(Pearson = cor(total_tweets, engaj_max, method = "pearson"), 
+              Spearman = cor(total_tweets, engaj_max, method = "spearman"), 
+              Kendall = cor(total_tweets, engaj_max, method = "kendall"))
+```
 
-Texto.
+Mais uma vez, considerando as diferenças entre deputados e senadores, os dados foram separados de acordo com a casa a que os parlamentares pertencem. Objetivando uma visualização mais adequada ao leitor, adotou-se novamente escalas logarítmicas (log10) para as duas variáveis analisadas.
+
+O *scatterplot* mais uma vez revelou que as variáveis estão relacionadas positivamente, porém, dessa vez também é possível perceber que os dados dos deputados descrevem uma função de natureza exponencial quando observados em escalas logarítmicas. A relação existente entre o engajamento máximo e o total de *tweets* e *retweets* também parece ser mais forte do que a relação avaliada anteriormente. 
+
+Em relação aos pontos extremos, é possível perceber que o senador **Cid Gomes** destoa bastante da tendência observada, atingindo um engajamento máximo acima de 1000 ainda que seja tão pouco ativo no Twitter. Por fim, os valores obtidos para os coeficientes de correlação calculados usando os métodos de Pearson, Spearman e Kendall corroboram com a percepção da existência de uma relação positiva e de força moderada entre as variáveis analisadas.
